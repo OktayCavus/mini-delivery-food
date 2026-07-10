@@ -9,6 +9,8 @@
 
 > **Dokümantasyon kaynağı:** Bu rehberdeki Spring Data JPA repository yaklaşımı ve `findBy...` query method örnekleri, Context7 üzerinden çekilen güncel **Spring Data JPA** dokümantasyonuna dayandırılmıştır: `/spring-projects/spring-data-jpa`.
 
+> **Bu fazı nasıl okumalısınız?** Kod bloklarını sadece kopyalanacak metin gibi düşünmeyin. Her anotasyonun yanında "Spring bunu görünce ne yapıyor?", "Veritabanında karşılığı ne?", "Neden buna ihtiyaç duyuyoruz?" sorularını sorun. Bu rehber özellikle bu sorulara cevap vermek için detaylandırılmıştır.
+
 ---
 
 ## İçindekiler
@@ -208,7 +210,6 @@ Entity örneği:
 ```java
 package com.cavus.delivery_food.product.entity;
 
-import com.cavus.delivery_food.category.entity.Category;
 import com.cavus.delivery_food.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -255,6 +256,42 @@ public class Product extends BaseEntity {
 ```
 
 > **Yeni başlayan notu:** `Product` tablosunda kategori bilgisi doğrudan kategori adı olarak tutulmaz. Onun yerine `category_id` tutulur. Bu ID, `categories` tablosundaki bir satırı gösterir.
+
+#### Product içindeki ilişki satırlarını tek tek okuyalım
+
+```java
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "category_id")
+private Category category;
+```
+
+Bu üç satır küçük görünür ama bu fazın en önemli konusudur.
+
+`private Category category;` normal bir Java field'ıdır. Yani bir `Product` nesnesinin içinde bir `Category` nesnesi referansı tutulabilir. Java açısından bu, "ürünün kategorisi var" demektir.
+
+`@ManyToOne` JPA'ya ilişki türünü anlatır. Buradaki okuma şekli şudur:
+
+```text
+Many Product -> One Category
+```
+
+Yani birçok ürün aynı kategoriye ait olabilir.
+
+Örnek:
+
+| Product | Category |
+| ------- | -------- |
+| Margherita Pizza | Pizza |
+| Pepperoni Pizza | Pizza |
+| Cheeseburger | Burger |
+
+İlk iki ürün aynı kategoriye bağlıdır. Bu yüzden Product açısından bakınca ilişki `ManyToOne` olur.
+
+`@JoinColumn(name = "category_id")` ise veritabanı kolonunu söyler. JPA bu anotasyonu görünce `products` tablosunda `category_id` adında bir foreign key kolonu kullanacağını anlar.
+
+Eğer bu anotasyonu yazmazsanız JPA yine bir kolon üretmeye çalışabilir, ama kolon adı framework varsayımına kalır. Yeni öğrenirken kolon adını açık yazmak daha anlaşılırdır.
+
+`fetch = FetchType.LAZY` ise "kategori bilgisini hemen yükleme, sadece ihtiyaç olursa yükle" demektir. Bu konu aşağıda ayrı başlıkta daha detaylı anlatılacak.
 
 ### 4.2 Category
 
@@ -318,6 +355,32 @@ public class Category extends BaseEntity {
 
 > **Yeni başlayan notu:** `@OneToMany(mappedBy = "category")` demek, "Bu ilişkinin asıl foreign key tarafı Product içindeki `category` alanıdır" demektir. Veritabanında `categories` tablosunda `product_id` tutulmaz.
 
+#### Category içindeki `products` listesi neden var?
+
+Bir kategoriye baktığınızda teorik olarak o kategoriye bağlı ürünleri de görmek isteyebilirsiniz.
+
+Java tarafında bunu şöyle ifade ederiz:
+
+```java
+private List<Product> products = new ArrayList<>();
+```
+
+Bu satır "Bir category nesnesinin altında birden fazla product olabilir" anlamına gelir.
+
+Ama dikkat: Bu liste veritabanında ayrı bir kolon değildir. `categories` tablosunda `products` diye bir kolon oluşmaz. İlişki yine `products.category_id` üzerinden kurulur.
+
+`mappedBy = "category"` ifadesi burada kilit noktadır.
+
+```java
+@OneToMany(mappedBy = "category")
+```
+
+Bu ifade JPA'ya şunu söyler:
+
+> Bu ilişkiyi ben yönetmiyorum. Karşı tarafta, yani `Product` sınıfında adı `category` olan field yönetiyor.
+
+Eğer `mappedBy` yazmazsanız JPA ilişkiyi nasıl kuracağını yanlış anlayabilir ve gereksiz bir ara tablo üretmeye çalışabilir. Bu da başlangıçta çok kafa karıştırır.
+
 ---
 
 ## 5. İlişki Mantığı
@@ -348,6 +411,38 @@ private Category category;
 @OneToMany(mappedBy = "category")
 private List<Product> products = new ArrayList<>();
 ```
+
+#### Hangi taraftan bakarsan isim değişir
+
+İlişkiyi anlamanın en kolay yolu şudur:
+
+Product tarafından bak:
+
+```text
+Birçok Product -> bir Category
+```
+
+Bu yüzden `Product` içinde:
+
+```java
+@ManyToOne
+private Category category;
+```
+
+Category tarafından bak:
+
+```text
+Bir Category -> birçok Product
+```
+
+Bu yüzden `Category` içinde:
+
+```java
+@OneToMany
+private List<Product> products;
+```
+
+Yani `ManyToOne` ve `OneToMany` farklı iki ilişki değil, aynı ilişkinin iki farklı yönden okunmuş halidir.
 
 ### 5.2 Veritabanı tarafı
 
@@ -397,6 +492,95 @@ Bu yüzden `Product` tarafında `@JoinColumn` vardır.
 `Category` tarafındaki `mappedBy = "category"` ise şunu söyler:
 
 > Bu ilişkiyi ben yönetmiyorum. Product sınıfındaki `category` alanı yönetiyor.
+
+### 5.4 `FetchType.LAZY` nedir?
+
+`FetchType`, JPA'nın ilişkili veriyi ne zaman yükleyeceğini belirler.
+
+Bu fazdaki kod:
+
+```java
+@ManyToOne(fetch = FetchType.LAZY)
+private Category category;
+```
+
+Bunu günlük hayat benzetmesiyle düşünelim.
+
+Bir restoranda menüye bakıyorsunuz. Menüde 100 ürün var. Her ürünün yanında kategori bilgisi de olabilir. Ama siz sadece ürün adlarını ve fiyatlarını listelemek istiyorsanız, her ürünün kategori nesnesini detaylı şekilde yüklemek gereksiz olabilir.
+
+`LAZY` şunu der:
+
+> Product'ı getir, ama Category'yi hemen getirme. Eğer kod gerçekten `product.getCategory()` derse o zaman Category bilgisini yükle.
+
+Yani:
+
+```java
+Product product = productRepository.findById(id).get();
+```
+
+Bu satırda ürün gelir.
+
+```java
+product.getCategory().getName();
+```
+
+Bu satırda kategoriye gerçekten ihtiyaç duyulduğu için JPA kategori bilgisini yüklemeye çalışır.
+
+#### Neden her şeyi hemen yüklemiyoruz?
+
+Çünkü ilişkiler büyüdükçe performans problemi doğar.
+
+Örnek:
+
+```text
+Product -> Category -> Products -> Category -> Products
+```
+
+Eğer her ilişki otomatik ve hemen yüklenirse küçük bir ürün listesi çekmek bile arka planda çok fazla sorguya dönüşebilir.
+
+Bu yüzden ilişkilerde "ne zaman yüklemeliyim?" sorusu önemlidir.
+
+#### `LAZY` kullanınca nelere dikkat edilir?
+
+`LAZY` ilişki transaction dışında okunursa hata alınabilir. Çünkü JPA ilişkiyi yüklemek için açık bir persistence context'e ihtiyaç duyar.
+
+Pratik kural:
+
+- Entity'leri controller'da dolaşma.
+- DTO dönüşümünü service içinde yap.
+- `@Transactional(readOnly = true)` olan metot içinde ihtiyacın olan alanları DTO'ya çevir.
+
+Bu projede bu yüzden akış şöyle kalmalıdır:
+
+```text
+Controller -> Service -> Repository -> Entity
+Controller <- Service <- Mapper <- DTO
+```
+
+Controller entity ile değil DTO ile konuşur.
+
+### 5.5 `EAGER` neden her zaman iyi değildir?
+
+`FetchType.EAGER`, ilişkili veriyi hemen yükle demektir.
+
+İlk bakışta kolay görünür:
+
+```java
+@ManyToOne(fetch = FetchType.EAGER)
+private Category category;
+```
+
+Ama bu yaklaşım büyüyen projelerde kontrolü zorlaştırır. Çünkü "ürünleri listele" dediğinizde JPA her ürün için kategori bilgisini de getirebilir. Daha sonra kategori başka ilişkiler taşıyorsa daha da fazla veri yüklenebilir.
+
+Yeni başlayanlar için basit kural:
+
+| Durum | Tercih |
+| ----- | ------ |
+| İlişkili veri her zaman gerekmiyorsa | `LAZY` |
+| İlişkili veri kesinlikle her zaman gerekiyorsa | Dikkatli şekilde `EAGER` |
+| REST API response dönüyorsanız | Genelde DTO + kontrollü mapping |
+
+Bu fazda `ManyToOne(fetch = FetchType.LAZY)` kullanmamızın sebebi budur.
 
 ---
 
@@ -512,6 +696,19 @@ src/main/java/com/cavus/delivery_food
         └── ProductService.java
 ```
 
+Bu paket yapısında her klasörün görevi ayrıdır.
+
+| Klasör | Ne işe yarar? | Yeni başlayan için kısa açıklama |
+| ------ | ------------- | -------------------------------- |
+| `entity` | Veritabanı modelini tutar | Tabloya karşılık gelen Java sınıfları |
+| `dto` | API giriş/çıkış modellerini tutar | Client'ın gönderdiği ve gördüğü veri |
+| `repository` | Veritabanı erişimini yapar | SQL yazmadan kayıt bulma/kaydetme |
+| `service` | İş kurallarını yönetir | "Kategori var mı?", "Ürün nereye bağlanacak?" gibi kararlar |
+| `controller` | HTTP endpoint'lerini açar | Postman/frontend buraya istek atar |
+| `mapper` | Entity ve DTO dönüşümü yapar | İç model ile dış model arasında çeviri |
+
+> **Yeni başlayan notu:** Controller'ın repository'ye direkt gitmemesi bilinçli bir tercihtir. Controller HTTP dünyasını bilir, Repository veritabanı dünyasını bilir, Service ise bu ikisinin arasında iş mantığını yönetir.
+
 ### 7.1 Category entity oluştur
 
 Dosya:
@@ -565,6 +762,26 @@ public class Category extends BaseEntity {
 - `products`: Bu kategoriye bağlı ürünleri temsil eder.
 - `mappedBy`: Foreign key'in Product tarafında olduğunu söyler.
 
+#### Bu entity'de neden `products` listesi var ama DTO'da yok?
+
+Entity tarafında ilişkiyi modellemek istiyoruz. Çünkü Java kodunda bir kategoriye bağlı ürünleri ifade edebilmek faydalıdır.
+
+Ama API response tarafında her kategori isteğinde ürünleri de döndürmek istemiyoruz. Çünkü kategori listesi genellikle menü başlıkları gibi kullanılır.
+
+Örnek kategori listesi:
+
+```json
+[
+  { "id": "1", "name": "Pizza" },
+  { "id": "2", "name": "Burger" },
+  { "id": "3", "name": "Drink" }
+]
+```
+
+Bu response hızlı, küçük ve anlaşılırdır.
+
+Eğer her kategorinin içinde tüm ürünleri döndürürsek response büyür ve circular reference riski oluşur.
+
 ### 7.2 Product entity güncelle
 
 Mevcut `Product` entity'sine category alanı eklenir.
@@ -572,10 +789,8 @@ Mevcut `Product` entity'sine category alanı eklenir.
 Eklenmesi gereken importlar:
 
 ```java
-import com.cavus.delivery_food.category.entity.Category;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+
+
 ```
 
 Eklenmesi gereken alan:
@@ -593,6 +808,45 @@ Tam ilişki mantığı:
 - `@JoinColumn(name = "category_id")`: `products` tablosuna `category_id` kolonu eklenir.
 
 > **Mimari not:** `ManyToOne` ilişkilerde genellikle `FetchType.LAZY` tercih edilir. Böylece her ürün listelendiğinde kategori nesnesi gereksiz yere yüklenmez.
+
+#### Burada neden `Category category` yazıyoruz, `UUID categoryId` yazmıyoruz?
+
+Entity içinde ilişkiyi sadece ID olarak tutmak yerine nesne referansı olarak tutarız:
+
+```java
+private Category category;
+```
+
+Çünkü JPA entity ilişkilerini nesneler üzerinden yönetir.
+
+Veritabanında bunun karşılığı yine ID'dir:
+
+```text
+products.category_id
+```
+
+Yani Java tarafında:
+
+```java
+product.getCategory().getName();
+```
+
+Veritabanı tarafında:
+
+```sql
+products.category_id -> categories.id
+```
+
+Bu ayrımı iyi anlamak gerekir:
+
+| Katman | Ne görür? |
+| ------ | --------- |
+| Java Entity | `Category category` nesnesi |
+| Veritabanı | `category_id` foreign key kolonu |
+| Request DTO | `UUID categoryId` |
+| Response DTO | `categoryId`, `categoryName` |
+
+DTO'da `categoryId` kullanırız, çünkü client veritabanındaki ilişkiyi ID ile tarif eder. Entity'de `Category` kullanırız, çünkü JPA ilişkiyi nesne olarak takip eder.
 
 ### 7.3 Category DTO'larını oluştur
 
@@ -656,6 +910,44 @@ public class CategoryResponse {
 
 > **Neden `products` listesi response içinde yok?** Çünkü kategori listesi çekerken her kategoriyle birlikte tüm ürünleri de döndürmek performans açısından risklidir. Ayrıca `Category -> Product -> Category -> Product` şeklinde circular reference hatası doğurabilir.
 
+#### Request DTO neden ayrı, Response DTO neden ayrı?
+
+`CategoryRequest`, dış dünyadan veri almak için vardır.
+
+Örnek:
+
+```json
+{
+  "name": "Pizza",
+  "description": "Pizza ürünleri",
+  "active": true
+}
+```
+
+Client kategori oluştururken `id`, `createdAt`, `updatedAt` göndermemelidir. Çünkü bunları sistem üretir.
+
+`CategoryResponse` ise dış dünyaya veri dönmek için vardır.
+
+Örnek:
+
+```json
+{
+  "id": "category-uuid",
+  "name": "Pizza",
+  "description": "Pizza ürünleri",
+  "active": true
+}
+```
+
+Burada `id` vardır çünkü client daha sonra bu ID ile ürünleri kategoriye bağlayacaktır.
+
+Kısa kural:
+
+| DTO | Amaç |
+| --- | ---- |
+| Request DTO | Client ne gönderebilir? |
+| Response DTO | Client ne görebilir? |
+
 ### 7.4 Product DTO'larını category bilgisiyle güncelle
 
 Ürün oluştururken kategori ID'si göndermek istiyorsanız `ProductRequest` içine `categoryId` ekleyin.
@@ -698,6 +990,35 @@ Böylece response şu şekilde olur:
 
 > **Mimari not:** Response içine tüm `Category` entity'sini koymak yerine sadece gereken alanları koymak daha kontrollüdür.
 
+#### ProductRequest içine neden `categoryId` ekliyoruz?
+
+Ürün oluştururken client şunu söylemek ister:
+
+> Bu ürünü şu kategoriye bağla.
+
+Client'ın bunu kategori adıyla yapması doğru değildir:
+
+```json
+{
+  "name": "Margherita Pizza",
+  "categoryName": "Pizza"
+}
+```
+
+Çünkü kategori adı değişebilir, farklı dillerde yazılabilir veya yanlış yazılabilir.
+
+Daha doğru yaklaşım ID ile bağlamaktır:
+
+```json
+{
+  "name": "Margherita Pizza",
+  "price": 12.99,
+  "categoryId": "category-uuid"
+}
+```
+
+Service katmanı bu ID ile gerçek `Category` kaydını bulur ve ürüne bağlar.
+
 ### 7.5 CategoryRepository oluştur
 
 Dosya:
@@ -711,7 +1032,6 @@ Kod:
 ```java
 package com.cavus.delivery_food.category.repository;
 
-import com.cavus.delivery_food.category.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -742,6 +1062,25 @@ boolean existsByName(String name);
 ```
 
 Yani elle SQL yazmadan Spring Data JPA metot adından sorguyu türetir.
+
+#### `Optional<Category>` neden kullanılıyor?
+
+`findByName` bir kategori bulabilir veya bulamayabilir.
+
+Eğer dönüş tipi doğrudan `Category` olsaydı ve kayıt bulunamasaydı `null` ile uğraşmanız gerekirdi.
+
+`Optional<Category>` şu mesajı verir:
+
+> Bu sorgudan sonuç gelmeyebilir, bunu bilinçli şekilde ele al.
+
+Örnek:
+
+```java
+Category category = categoryRepository.findByName("Pizza")
+        .orElseThrow(() -> new RuntimeException("Kategori bulunamadı"));
+```
+
+Bu, `null` kontrolünü unutma riskini azaltır.
 
 ### 7.6 ProductRepository güncelle
 
@@ -775,6 +1114,32 @@ Bu metot şunu ifade eder:
 
 Spring Data JPA bu metodu otomatik sorguya çevirir.
 
+#### `findByCategoryId` ismini Spring nasıl anlıyor?
+
+Spring Data JPA metot adını parçalara ayırır:
+
+```text
+findBy Category Id
+```
+
+Burada:
+
+- `findBy`: Sorgu başlat
+- `Category`: Product entity'sindeki `category` alanına git
+- `Id`: Category entity'sinin `id` alanına bak
+
+Yani metot adı şu anlama gelir:
+
+```sql
+SELECT p.*
+FROM products p
+WHERE p.category_id = ?
+```
+
+Context7 üzerinden kontrol edilen Spring Data JPA dokümantasyonunda bu yaklaşım `findByLastname`, `findByEmailAddress` gibi örneklerle gösterilir. Biz burada aynı mantığı ilişkili alan için kullanıyoruz.
+
+> **Yeni başlayan notu:** Bu metodu yazınca method body'si yazmıyorsunuz. Çünkü `JpaRepository` ve Spring Data JPA runtime'da bu sorguyu sizin için üretir.
+
 ### 7.7 CategoryMapper oluştur
 
 Projede `ProductMapper` için MapStruct kullanıldığı için Category tarafında da aynı yaklaşımı kullanmak tutarlı olur.
@@ -792,7 +1157,6 @@ package com.cavus.delivery_food.category.mapper;
 
 import com.cavus.delivery_food.category.dto.CategoryRequest;
 import com.cavus.delivery_food.category.dto.CategoryResponse;
-import com.cavus.delivery_food.category.entity.Category;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -827,6 +1191,31 @@ public interface CategoryMapper {
 ```
 
 Category oluştururken dışarıdan ürün listesi almıyoruz. Ürünler ayrı endpoint ile kategoriye bağlanacak.
+
+#### Mapper neden var?
+
+Mapper, entity ile DTO arasında çeviri yapar.
+
+Manuel yazsaydınız şöyle olurdu:
+
+```java
+CategoryResponse response = new CategoryResponse();
+response.setId(category.getId().toString());
+response.setName(category.getName());
+response.setDescription(category.getDescription());
+response.setActive(category.getActive());
+```
+
+Bu kod her yerde tekrar ederdi. MapStruct bu tekrarları azaltır.
+
+Ama mapper'ın sınırı vardır:
+
+- Mapper veritabanına gitmez.
+- Mapper iş kuralı uygulamaz.
+- Mapper "kategori var mı?" diye kontrol etmez.
+- Mapper sadece dönüşüm yapar.
+
+Bu yüzden category ID'den gerçek category bulma işi mapper'da değil service katmanındadır.
 
 ### 7.8 ProductMapper güncelle
 
@@ -870,6 +1259,39 @@ void updateProductFromRequest(ProductRequest request, @MappingTarget Product pro
 
 > **Mimari not:** DTO'dan gelen `categoryId`, mapper'da değil service katmanında çözülmelidir. Çünkü mapper veritabanına gitmemelidir.
 
+#### `category` neden ignore ediliyor?
+
+`ProductRequest` içinde sadece şu bilgi vardır:
+
+```java
+private UUID categoryId;
+```
+
+Ama `Product` entity'si şunu ister:
+
+```java
+private Category category;
+```
+
+MapStruct tek başına bir UUID'den veritabanındaki Category entity'sini bulamaz. Bulmamalıdır da. Çünkü bu, mapper'ın sorumluluğu değildir.
+
+Bu yüzden mapper'a şunu deriz:
+
+```java
+@Mapping(target = "category", ignore = true)
+```
+
+Anlamı:
+
+> Product nesnesini oluştur, ama category alanını şimdilik boş bırak. Service katmanı onu daha sonra dolduracak.
+
+Sonra service içinde:
+
+```java
+Category category = categoryService.getEntityById(request.getCategoryId());
+entity.setCategory(category);
+```
+
 ### 7.9 CategoryService oluştur
 
 Dosya:
@@ -885,7 +1307,6 @@ package com.cavus.delivery_food.category.service;
 
 import com.cavus.delivery_food.category.dto.CategoryRequest;
 import com.cavus.delivery_food.category.dto.CategoryResponse;
-import com.cavus.delivery_food.category.entity.Category;
 import com.cavus.delivery_food.category.mapper.CategoryMapper;
 import com.cavus.delivery_food.category.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
@@ -938,6 +1359,38 @@ public class CategoryService {
 ```java
 Category category = categoryService.getEntityById(categoryId);
 product.setCategory(category);
+```
+
+#### Service katmanı burada tam olarak ne yapıyor?
+
+Service katmanı bu fazda sadece "repository'den gelen veriyi controller'a taşıyan sınıf" değildir. Artık gerçek iş kuralı taşır.
+
+Örnek iş kuralları:
+
+- Aynı isimde kategori oluşturma.
+- Ürün kategoriye atanacaksa önce ürün var mı kontrol etme.
+- Ürün kategoriye atanacaksa önce kategori var mı kontrol etme.
+- Kategori yoksa doğru exception fırlatma.
+- Entity'yi response DTO'ya çevirme.
+
+Bu yüzden ilişki kurma kodunu controller'a yazmıyoruz.
+
+Kötü yaklaşım:
+
+```java
+// Controller içinde repository çağırmak
+Product product = productRepository.findById(productId).get();
+Category category = categoryRepository.findById(categoryId).get();
+product.setCategory(category);
+```
+
+Doğru yaklaşım:
+
+```text
+Controller isteği alır.
+Service iş kuralını uygular.
+Repository veritabanı işlemini yapar.
+Mapper response hazırlar.
 ```
 
 ### 7.10 CategoryNotFoundException oluştur
@@ -1036,6 +1489,39 @@ public List<ProductResponse> findByCategory(UUID categoryId) {
 ```
 
 > **Neden önce category var mı diye kontrol ediyoruz?** Çünkü kategori yoksa boş liste dönmek yanıltıcı olabilir. `categoryId` yanlışsa 404 dönmek daha doğru bir API davranışıdır.
+
+#### `@Transactional` burada neden önemli?
+
+`@Transactional`, bir service metodu içindeki veritabanı işlemlerini tek bir işlem gibi yönetir.
+
+Örneğin:
+
+```java
+Product product = productRepository.findById(productId)
+        .orElseThrow(() -> new ProductNotFoundException(productId));
+
+Category category = categoryService.getEntityById(categoryId);
+product.setCategory(category);
+```
+
+Bu adımlarda ürün bulunur, kategori bulunur ve ilişki kurulur. Bu işlemler aynı transaction içinde olursa JPA entity değişikliklerini düzgün takip eder.
+
+Okuma metotlarında:
+
+```java
+@Transactional(readOnly = true)
+```
+
+Bu ifade "bu metot veri değiştirmeyecek" demektir. Spring ve JPA için daha net bir niyet belirtir.
+
+Yeni başlayanlar için pratik kural:
+
+| Metot türü | Transaction |
+| ---------- | ----------- |
+| Veri oluşturma | `@Transactional` |
+| Veri güncelleme | `@Transactional` |
+| Veri silme | `@Transactional` |
+| Sadece okuma | `@Transactional(readOnly = true)` |
 
 ### 7.12 CategoryController oluştur
 
@@ -1304,7 +1790,52 @@ Entity'leri doğrudan JSON olarak döndürürseniz şu problemler çıkabilir:
 - Frontend'e veritabanı modelinin sızması
 - Hassas veya gereksiz alanların dışarı açılması
 
-### 9.1 Kötü response örneği
+### 9.1 DTO'yu günlük hayatla düşünelim
+
+Entity, restoranın mutfağındaki gerçek çalışma düzeni gibidir. İçeride stok, kategori, ilişkiler, tarih alanları, teknik ID'ler ve başka detaylar vardır.
+
+DTO ise müşteriye verilen menü gibidir. Müşteri mutfağın tüm detaylarını görmez; sadece ihtiyacı olan bilgiyi görür.
+
+Backend'de de aynı mantık geçerlidir.
+
+Entity içeride kullanılır:
+
+```java
+Product product = productRepository.findById(id).orElseThrow();
+Category category = product.getCategory();
+```
+
+DTO dışarıya döner:
+
+```json
+{
+  "id": "product-uuid",
+  "name": "Margherita Pizza",
+  "price": 12.99,
+  "categoryName": "Pizza"
+}
+```
+
+Bu ayrım küçük projede fazla gibi görünebilir, ama ilişki başladığı anda çok değerlidir.
+
+### 9.2 Entity ve DTO aynı şey değildir
+
+Yeni başlayanların sık yaptığı hata şudur:
+
+> "Entity zaten elimde var, neden direkt onu dönmüyorum?"
+
+Çünkü entity veritabanı modelidir, API modeli değildir.
+
+| Entity | DTO |
+| ------ | --- |
+| Veritabanı tablosuna yakındır | API request/response'a yakındır |
+| İlişkileri taşır | Seçilmiş alanları taşır |
+| JPA tarafından yönetilir | Sadece veri taşır |
+| Controller'dan dönülmesi risklidir | Controller response'u için uygundur |
+
+Bu fazda DTO kullanımı artık mimari bir tercih değil, hataları önlemek için gerekli bir pratiktir.
+
+### 9.3 Kötü response örneği
 
 Category entity'sini doğrudan dönerseniz şöyle bir yapı oluşabilir:
 
@@ -1333,7 +1864,7 @@ Category entity'sini doğrudan dönerseniz şöyle bir yapı oluşabilir:
 
 Bu yapı büyüyerek devam edebilir.
 
-### 9.2 Doğru response örneği
+### 9.4 Doğru response örneği
 
 DTO ile response kontrollü olur:
 
@@ -1349,7 +1880,7 @@ DTO ile response kontrollü olur:
 
 Burada frontend ihtiyacı olan bilgiyi alır, ama entity grafiği dışarı açılmaz.
 
-### 9.3 Request DTO ve Response DTO ayrımı
+### 9.5 Request DTO ve Response DTO ayrımı
 
 Request DTO:
 
@@ -1377,6 +1908,63 @@ Request içinde `categoryId` yeterlidir. Client tüm category nesnesini gönderm
 
 Response içinde ise `categoryName` eklemek frontend için kullanışlıdır. Frontend tekrar category adı çekmek zorunda kalmaz.
 
+### 9.6 DTO ile lazy loading ilişkisi
+
+DTO kullanmak lazy loading problemlerini de azaltır.
+
+Kötü akış:
+
+```text
+Controller entity döner
+Jackson JSON'a çevirmeye çalışır
+Jackson product.getCategory() çağırır
+Transaction kapanmış olabilir
+Lazy loading hatası oluşabilir
+```
+
+Daha kontrollü akış:
+
+```text
+Service transaction içinde entity'yi alır
+Mapper gerekli alanları DTO'ya çevirir
+Controller DTO döner
+Jackson sadece düz DTO alanlarını JSON'a çevirir
+```
+
+Bu yüzden DTO sadece "temiz response" için değil, JPA ilişkileriyle güvenli çalışmak için de kullanılır.
+
+### 9.7 DTO'ya ne koymalıyız?
+
+DTO tasarlarken şu soruyu sorun:
+
+> Client bu endpoint için gerçekten hangi bilgiye ihtiyaç duyuyor?
+
+Ürün listesi için genelde yeterli alanlar:
+
+- `id`
+- `name`
+- `price`
+- `imageUrl`
+- `stock`
+- `active`
+- `categoryId`
+- `categoryName`
+
+Ama `Category` entity'sinin tamamını koymak genelde gereksizdir.
+
+Kategori listesi için genelde yeterli alanlar:
+
+- `id`
+- `name`
+- `description`
+- `active`
+
+Ama kategori içindeki tüm ürünleri koymak çoğu zaman doğru değildir. Ürünler için ayrı endpoint vardır:
+
+```http
+GET /api/v1/products/by-category/{categoryId}
+```
+
 ---
 
 ## 10. Yaygın Hatalar
@@ -1399,6 +1987,8 @@ Neden kötü?
 - Lazy loading problemleri yaşanabilir.
 - Response formatını kontrol etmek zorlaşır.
 
+Bu hata başlangıçta çalışıyor gibi görünebilir. Ama proje büyüyünce aynı endpoint bazen çok büyük JSON döner, bazen lazy loading hatası verir, bazen de entity içinde istemediğiniz teknik alanlar dışarı sızar.
+
 Doğru:
 
 ```java
@@ -1412,6 +2002,16 @@ public ResponseEntity<BaseResponse<List<CategoryResponse>>> getAllCategories() {
 ### 10.2 `@OneToMany` tarafına `@JoinColumn` koymak
 
 Bu projede foreign key `products.category_id` kolonundadır. Bu yüzden ilişkiyi `Product` tarafı yönetir.
+
+Yeni başlayanlar bazen "Category'nin birçok Product'ı var, o zaman foreign key Category tarafında olmalı" diye düşünebilir. Veritabanında durum tersidir.
+
+Bir ürün satırı hangi kategoriye ait olduğunu bilir:
+
+```text
+products.category_id
+```
+
+Ama bir kategori satırının içinde bütün product ID'lerini listelemek ilişkisel veritabanı mantığına uygun değildir.
 
 Doğru:
 
@@ -1447,6 +2047,29 @@ Pratik çözüm:
 - DTO dönüşümünü service transaction içindeyken yapın.
 - Gerekiyorsa repository'de `@Query` veya `@EntityGraph` gibi daha ileri teknikleri sonraki fazlarda öğrenin.
 
+Örnek riskli kullanım:
+
+```java
+@GetMapping("/{id}")
+public Product getProduct(@PathVariable UUID id) {
+    return productRepository.findById(id).orElseThrow();
+}
+```
+
+Bu kod entity döndürür. JSON'a çevirme sırasında Jackson `category` alanına erişmeye çalışabilir. Eğer transaction kapanmışsa lazy loading problemi çıkabilir.
+
+Daha güvenli kullanım:
+
+```java
+@GetMapping("/{id}")
+public ResponseEntity<BaseResponse<ProductResponse>> getProduct(@PathVariable UUID id) {
+    ProductResponse product = productService.findById(id);
+    return ResponseEntity.ok(BaseResponse.success(200, "Ürün başarıyla getirildi", product));
+}
+```
+
+Burada controller sadece DTO görür.
+
 ### 10.4 Circular reference
 
 `Category` içinde `products`, `Product` içinde `category` varsa JSON çevirici sonsuz döngüye girebilir.
@@ -1462,6 +2085,23 @@ Category
 ```
 
 DTO bu problemi temiz şekilde çözer.
+
+#### `@JsonIgnore` kullanmak çözüm mü?
+
+Bazen circular reference için `@JsonIgnore`, `@JsonManagedReference`, `@JsonBackReference` gibi Jackson anotasyonları kullanılır.
+
+Bu anotasyonlar bazı durumlarda işe yarar, ama yeni başlayan bir backend projesinde ilk tercih DTO olmalıdır.
+
+Çünkü DTO sadece circular reference'ı değil, response tasarımını da çözer.
+
+Kısa kıyas:
+
+| Yaklaşım | Ne çözer? | Risk |
+| -------- | --------- | ---- |
+| `@JsonIgnore` | Bazı JSON döngülerini keser | Entity response tasarımını hâlâ dışarı açar |
+| DTO | Response'u tamamen kontrol eder | Ek sınıf yazmanız gerekir |
+
+Bu projede DTO yaklaşımı daha temizdir.
 
 ### 10.5 Category ID yerine category name ile ilişki kurmak
 
@@ -1503,6 +2143,10 @@ Controller -> Service -> Repository
                  -> Mapper
 ```
 
+Bu ayrımın sebebi test edilebilirliktir. Mapper sadece dönüşüm yaptığı için kolay test edilir. Service ise iş kuralı taşıdığı için ayrı test edilir. Repository ise veritabanı erişimidir.
+
+Sorumluluklar karışırsa küçük bir değişiklik birçok yeri bozar.
+
 ### 10.7 Olmayan categoryId ile ürün oluşturmak
 
 Request:
@@ -1531,6 +2175,15 @@ Mesaj:
   "data": null
 }
 ```
+
+Burada 400 mü 404 mü sorusu gelebilir.
+
+Pratik yorum:
+
+- `categoryId` format olarak bozuksa: `400 Bad Request`
+- `categoryId` format olarak doğru UUID ama veritabanında yoksa: `404 Not Found`
+
+Bu ayrım API davranışını daha anlaşılır yapar.
 
 ---
 
