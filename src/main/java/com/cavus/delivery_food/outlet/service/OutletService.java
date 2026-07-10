@@ -27,7 +27,7 @@ public class OutletService {
     private final OutletRepository outletRepository;
     private final OutletMapper outletMapper;
 
-    public OutletResponse cretate(OutletRequest request) {
+    public OutletResponse create(OutletRequest request) {
         String normalizedName = normalizeName(request.getName());
 
         if(outletRepository.existsByNameIgnoreCase(normalizedName)){
