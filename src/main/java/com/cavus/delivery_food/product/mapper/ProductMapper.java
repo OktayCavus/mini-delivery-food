@@ -12,13 +12,21 @@ import java.util.List;
 // ! SERVICE KATMANINDA KULLANILIR
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
+
+    /// Category'yi ignore ettik çünkü request içinde UUID olarak categoryId var
+    /// Gerçek category nesnesini service katmanında repository ile bulmak gerekiyor
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "category", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     List<Product> toProductList(List<ProductRequest> productRequests);
 
+    /// ProductResponse'a eklediğimiz categoryId ve categoryName alanlarının
+    /// nereden doldurulacağını söylüyoruz bu Mapping vasıtasıyla
+    @Mapping(source = "category.id", target = "categoryId")
+    @Mapping(source = "category.name", target = "categoryName")
     ProductResponse toProductResponse(Product product);
 
     List<ProductResponse> toProductResponseList(List<Product> products);
@@ -27,6 +35,7 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "category", ignore = true)
     void updateProductFromRequest(ProductRequest request,
                                   @MappingTarget Product product);
 }

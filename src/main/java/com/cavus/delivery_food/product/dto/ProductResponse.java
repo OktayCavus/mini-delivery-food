@@ -26,4 +26,8 @@ public class ProductResponse {
     private String unit;
 
     private Boolean active;
+
+    private String categoryId;
+
+    private String categoryName;
 }

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -32,4 +33,6 @@ public class ProductRequest {
     private String unit;
 
     private Boolean active = true;
+
+    private UUID categoryId;
 }
