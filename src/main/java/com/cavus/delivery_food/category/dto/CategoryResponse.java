@@ -12,6 +12,8 @@ public class CategoryResponse {
     private String name;
     private String description;
     private Boolean active;
+    private String outletId;
+    private String outletName;
 
     /// Product listesi response'da yok çünkü kategori listesi çekerken her kategoriyle birlikte tüm ürünleri de döndürmek performans açısından risklidir.
 }

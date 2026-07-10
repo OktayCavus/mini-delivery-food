@@ -18,8 +18,13 @@ public interface CategoryMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "products", ignore = true)
+    @Mapping(target = "outlet", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     Category toEntity(CategoryRequest request);
 
+    @Mapping(source = "outlet.id", target = "outletId")
+    @Mapping(source = "outlet.name", target = "outletName")
     CategoryResponse toCategoryResponse(Category category);
 
     List<CategoryResponse> toCategoryResponseList(List<Category> categories);
@@ -28,5 +33,8 @@ public interface CategoryMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "products", ignore = true)
+    @Mapping(target = "outlet", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     void updateCategoryFromRequest(CategoryRequest request, @MappingTarget Category category);
 }

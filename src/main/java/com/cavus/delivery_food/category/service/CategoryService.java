@@ -5,6 +5,11 @@ import com.cavus.delivery_food.category.dto.CategoryResponse;
 import com.cavus.delivery_food.category.entity.Category;
 import com.cavus.delivery_food.category.mapper.CategoryMapper;
 import com.cavus.delivery_food.category.repository.CategoryRepository;
+import com.cavus.delivery_food.outlet.entity.Outlet;
+import com.cavus.delivery_food.outlet.service.OutletService;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +21,14 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final OutletService outletService;
 
-    public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper) {
-        this.categoryRepository = categoryRepository;
-        this.categoryMapper = categoryMapper;
-    }
+  
 
     public CategoryResponse create(CategoryRequest request) {
         String normalizedName = normalizeName(request.getName());
@@ -82,6 +86,31 @@ public class CategoryService {
         List<Category> savedCategories = categoryRepository.saveAll(categories);
 
         return categoryMapper.toCategoryResponseList(savedCategories);
+    }
+
+    public List<CategoryResponse> findAllByOutletId(UUID outletId) {
+          outletService.getEntityById(outletId);
+    return categoryMapper.toCategoryResponseList(categoryRepository.findAllByOutletIdAndActiveTrue(outletId));
+    }
+
+    public CategoryResponse createCategoryForOutlet(UUID outletId, CategoryRequest request) {
+        Outlet outlet = outletService.getEntityById(outletId);
+
+        String normalizedName = normalizeName(request.getName());
+
+        if (categoryRepository.existsByNameIgnoreCaseAndOutletId(normalizedName, outletId)) {
+            throw new CategoryExistException(normalizedName);
+        }
+
+        Category category = categoryMapper.toEntity(request);
+
+        category.setName(normalizedName);
+
+        category.setOutlet(outlet);
+
+       return categoryMapper.toCategoryResponse( categoryRepository.save(category));
+
+        
     }
 
     private String normalizeName(String name) {
