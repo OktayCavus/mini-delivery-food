@@ -30,4 +30,8 @@ public class ProductResponse {
     private String categoryId;
 
     private String categoryName;
+
+    private String outletId;
+
+    private String outletName;
 }

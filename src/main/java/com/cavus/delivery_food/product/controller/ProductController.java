@@ -147,7 +147,15 @@ public class ProductController {
         List<ProductResponse> products = productService.findProductsFromCategory(categoryId);
 
         return ResponseEntity.ok(
-                BaseResponse.success(200, "Kategoriye ait ürünler listelendi", products)
-        );
+                BaseResponse.success(200, "Kategoriye ait ürünler listelendi", products));
     }
+    
+    @GetMapping("/by-outlet/{outletId}")
+@Operation(summary = "Outlet menüsündeki ürünleri listele")
+public ResponseEntity<BaseResponse<List<ProductResponse>>> getProductsByOutlet(
+        @PathVariable UUID outletId) {
+    List<ProductResponse> products = productService.findByOutletId(outletId);
+    return ResponseEntity.ok(
+            BaseResponse.success(200, "Outlet ürünleri listelendi", products));
+}
 }

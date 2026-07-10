@@ -35,4 +35,7 @@ public class ProductRequest {
     private Boolean active = true;
 
     private UUID categoryId;
+
+    @NotNull(message = "Outlet ID zorunludur")
+    private UUID outletId;
 }

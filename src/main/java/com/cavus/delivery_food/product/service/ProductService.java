@@ -3,32 +3,33 @@ package com.cavus.delivery_food.product.service;
 
 import com.cavus.delivery_food.category.entity.Category;
 import com.cavus.delivery_food.category.service.CategoryService;
+import com.cavus.delivery_food.outlet.entity.Outlet;
+import com.cavus.delivery_food.outlet.service.OutletService;
 import com.cavus.delivery_food.product.dto.ProductRequest;
 import com.cavus.delivery_food.product.dto.ProductResponse;
 import com.cavus.delivery_food.product.entity.Product;
 import com.cavus.delivery_food.product.mapper.ProductMapper;
 import com.cavus.delivery_food.product.repository.ProductRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @Transactional
 ///  `@Transactional` bir metot içindeki tüm DB işlemlerinin tek bir transaction'da (atomik) yapılmasını sağlar — biri başarısız olursa hepsi geri alınır.
+@RequiredArgsConstructor
 public class  ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final CategoryService categoryService;
+    private final OutletService outletService;
 
-    public ProductService(ProductRepository productRepository, ProductMapper productMapper, CategoryService categoryService){
-        this.productRepository = productRepository;
-        this.productMapper = productMapper;
-        this.categoryService = categoryService;
-    }
 
     /// `@Transactional(readOnly = true)` ne demek?** Sadece okuma yapan metotlarda (findAll, findById) performans için "bu metot veri değiştirmiyor" bilgisini verir.
 
@@ -55,12 +56,19 @@ public class  ProductService {
     @Transactional
     public ProductResponse create(ProductRequest request) {
         Product entity = productMapper.toEntity(request);
+
+        Outlet outlet = outletService.getEntityById(request.getOutletId());
+
+        entity.setOutlet(outlet);
+
         /// Produuct'a category ekleme
         if(request.getCategoryId() != null){
             Category category = categoryService.getEntityById(request.getCategoryId());
+            validateCategoryBelongsToOutlet(category, outlet);
             entity.setCategory(category);
         }
         Product savedProduct = productRepository.save(entity);
+
         return productMapper.toProductResponse(savedProduct);
     }
 
@@ -125,6 +133,20 @@ public class  ProductService {
         Product product = productRepository.findById(uuid)
                 .orElseThrow(() -> new ProductNotFoundException(uuid));
 
+        Outlet targetOutlet = product.getOutlet();
+
+        if (request.getOutletId() != null) {
+            targetOutlet = outletService.getEntityById(request.getOutletId());
+            product.setOutlet(targetOutlet);
+        }
+
+        if (request.getCategoryId() != null) {
+            Category category = categoryService.getEntityById(request.getCategoryId());
+            validateCategoryBelongsToOutlet(category, targetOutlet);
+            product.setCategory(category);
+        }
+
+        
         productMapper.updateProductFromRequest(request, product);
 
         Product updatedProduct = productRepository.save(product);
@@ -138,5 +160,26 @@ public class  ProductService {
 
         productRepository.delete(product);
     }
+
+   @Transactional(readOnly = true)
+   public List<ProductResponse> findByOutletId(UUID outletId) {
+       outletService.getEntityById(outletId);
+       return productMapper.toProductResponseList(productRepository.findByOutletId(outletId));
+   }
+
+   @Transactional(readOnly = true)
+public List<ProductResponse> findByOutletIdAndCategoryId(UUID outletId, UUID categoryId) {
+    Outlet outlet = outletService.getEntityById(outletId);
+    Category category = categoryService.getEntityById(categoryId);
+    validateCategoryBelongsToOutlet(category, outlet);
+    return productMapper.toProductResponseList(
+            productRepository.findByOutletIdAndCategoryId(outletId, categoryId));
+}
+
+  private void validateCategoryBelongsToOutlet(Category category, Outlet outlet) {
+    if (!category.getOutlet().getId().equals(outlet.getId())) {
+        throw new IllegalArgumentException("Kategori bu outlet'a ait değil");
+    }
+}
 }
 

@@ -19,14 +19,21 @@ public interface ProductMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "outlet", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     List<Product> toProductList(List<ProductRequest> productRequests);
 
     /// ProductResponse'a eklediğimiz categoryId ve categoryName alanlarının
     /// nereden doldurulacağını söylüyoruz bu Mapping vasıtasıyla
+    /// Product Entity'de category var diyoruz ki Response'daki categoryId category tablosundaki id ile dolduruluyor
+    /// private Category category; bu alan Entity'deki alan
     @Mapping(source = "category.id", target = "categoryId")
     @Mapping(source = "category.name", target = "categoryName")
+    @Mapping(source = "outlet.id" , target = "outletId")
+    @Mapping(source = "outlet.name" , target = "outletName")
     ProductResponse toProductResponse(Product product);
 
     List<ProductResponse> toProductResponseList(List<Product> products);
@@ -36,6 +43,9 @@ public interface ProductMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "outlet", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     void updateProductFromRequest(ProductRequest request,
                                   @MappingTarget Product product);
 }
