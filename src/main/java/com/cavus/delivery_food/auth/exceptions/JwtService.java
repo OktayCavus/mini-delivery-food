@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.auth.service;
+package com.cavus.delivery_food.auth.exceptions;
 
 import java.util.Base64;
 import java.util.Date;
@@ -39,7 +39,11 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        try {
+            return extractClaim(token, Claims::getSubject);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid token");
+        }
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

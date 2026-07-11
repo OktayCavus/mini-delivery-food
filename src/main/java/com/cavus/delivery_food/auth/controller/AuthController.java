@@ -13,9 +13,11 @@ import com.cavus.delivery_food.auth.dto.RegisterResponse;
 import com.cavus.delivery_food.auth.service.AuthService;
 import com.cavus.delivery_food.common.response.BaseResponse;
 
+import jakarta.validation.Valid;
+
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -26,7 +28,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<BaseResponse<RegisterResponse>> register(
-            @RequestBody RegisterRequest request) {
+           @Valid @RequestBody RegisterRequest request) {
     
         RegisterResponse response = authService.register(request);
     
@@ -37,7 +39,7 @@ public class AuthController {
     
     @PostMapping("/login")
     public ResponseEntity<BaseResponse<LoginResponse>> login(
-            @RequestBody LoginRequest request) {
+           @Valid @RequestBody LoginRequest request) {
     
         LoginResponse response = authService.login(request);
     

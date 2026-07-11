@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.auth.service;
+package com.cavus.delivery_food.auth.exceptions;
 
 public class InvalidPasswordException extends RuntimeException{
 

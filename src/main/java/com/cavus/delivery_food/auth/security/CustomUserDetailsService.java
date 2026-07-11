@@ -10,7 +10,7 @@ import com.cavus.delivery_food.auth.repository.AuthRepository;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    final AuthRepository authRepository;
+    private final AuthRepository authRepository;
 
     public CustomUserDetailsService(AuthRepository authRepository) {
         this.authRepository = authRepository;

@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.cavus.delivery_food.auth.service.JwtService;
+import com.cavus.delivery_food.auth.exceptions.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

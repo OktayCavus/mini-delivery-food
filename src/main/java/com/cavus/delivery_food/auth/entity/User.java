@@ -1,6 +1,6 @@
 package com.cavus.delivery_food.auth.entity;
 
-import com.cavus.delivery_food.entity.BaseEntity;
+import com.cavus.delivery_food.common.entity.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

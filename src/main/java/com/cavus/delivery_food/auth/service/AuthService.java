@@ -16,6 +16,8 @@ import com.cavus.delivery_food.auth.dto.RegisterRequest;
 import com.cavus.delivery_food.auth.dto.RegisterResponse;
 import com.cavus.delivery_food.auth.entity.Role;
 import com.cavus.delivery_food.auth.entity.User;
+import com.cavus.delivery_food.auth.exceptions.EmailAlreadyExistException;
+import com.cavus.delivery_food.auth.exceptions.JwtService;
 import com.cavus.delivery_food.auth.mapper.UserMapper;
 import com.cavus.delivery_food.auth.repository.AuthRepository;
 
@@ -40,7 +42,7 @@ public class AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         if(authRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new EmailAlreadyExistException(request.getEmail());
         }
 
 
