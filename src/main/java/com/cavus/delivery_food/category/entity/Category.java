@@ -1,11 +1,12 @@
 package com.cavus.delivery_food.category.entity;
 
-import com.cavus.delivery_food.entity.BaseEntity;
+import com.cavus.delivery_food.common.entity.BaseEntity;
 import com.cavus.delivery_food.outlet.entity.Outlet;
 import com.cavus.delivery_food.product.entity.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -23,7 +24,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "categories")
+@Table(name = "categories", indexes = {
+    @Index(name = "idx_category_outlet", columnList = "outlet_id")
+})
 public class Category extends BaseEntity {
 
     @Column(nullable = false, length = 100)
@@ -44,9 +47,11 @@ public class Category extends BaseEntity {
     /// Burada One ifadesi annotation'un yazıldığı sınıfı (Category) Many ifadesi ilişkili olduğu sınıfı (Product) temsil eder.
     /// Product.java dosyasında ManyToOne annotation'u ile Category.java dosyasında OneToMany annotation'u birbirini karşılıyor.
     /// JoinColumn annotation'u ise foreign key'i belirtir.
+    /// products tablosunda category_id kolonu olduğu için mappedBy = "category" olarak belirtilir. Outlet.java dosyasına bakınız.
     @OneToMany(mappedBy = "category")
     private List<Product> products = new ArrayList<>();
 
+    /// @JoinColumn ifadesi de FK'yi tutan tarafa yazılır. Product.java dosyasına bakınız.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "outlet_id", nullable = false)
     private Outlet outlet;

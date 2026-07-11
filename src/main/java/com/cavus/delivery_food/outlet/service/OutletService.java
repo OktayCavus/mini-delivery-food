@@ -5,17 +5,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cavus.delivery_food.outlet.dto.OutletRequest;
 import com.cavus.delivery_food.outlet.dto.OutletResponse;
 import com.cavus.delivery_food.outlet.entity.Outlet;
+import com.cavus.delivery_food.outlet.exceptions.OutletExistException;
+import com.cavus.delivery_food.outlet.exceptions.OutletNotFoundException;
 import com.cavus.delivery_food.outlet.mapper.OutletMapper;
 import com.cavus.delivery_food.outlet.repository.OutletRepository;
+import static com.cavus.delivery_food.common.utils.NormalizeStringUtils.normalizeString;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 
@@ -28,25 +30,28 @@ public class OutletService {
     private final OutletMapper outletMapper;
 
     public OutletResponse create(OutletRequest request) {
-        String normalizedName = normalizeName(request.getName());
+        String normalizedName = normalizeString(request.getName());
 
-        if(outletRepository.existsByNameIgnoreCase(normalizedName)){
+        if (outletRepository.existsByNameIgnoreCase(normalizedName)) {
             throw new OutletExistException();
         }
 
         Outlet outlet = outletMapper.toEntity(request);
         outlet.setName(normalizedName);
-        return outletMapper.toResponse( outletRepository.save(outlet));
+        return outletMapper.toResponse(outletRepository.save(outlet));
     }
 
+    @Transactional(readOnly = true)
     public List<OutletResponse> findAll() {
         return outletMapper.toOutletResponseList(outletRepository.findAll());
     }
 
+    @Transactional(readOnly = true)
     public List<OutletResponse> findAllByActive() {
         return outletMapper.toOutletResponseList(outletRepository.findByActiveTrue());
     }
 
+    @Transactional(readOnly = true)
     public OutletResponse findById(UUID id) {
         if(id == null){
             throw new IllegalArgumentException("ID boş olamaz");
@@ -56,6 +61,7 @@ public class OutletService {
     }
 
     // ! Burada productService'de ürünü hangi outlet'e ekleyeceğimizi bulmak için kullanıyoruz.
+    @Transactional(readOnly = true)
     public Outlet getEntityById(UUID id) {
         if(id == null){
             throw new IllegalArgumentException("ID boş olamaz");
@@ -68,11 +74,11 @@ public class OutletService {
         Outlet outlet = getEntityById(uuid);
 
         if (request.getName() != null) {
-            String normalizedName = normalizeName(request.getName());
+            String normalizedName = normalizeString(request.getName());
 
-            if (normalizedName.equalsIgnoreCase(outlet.getName())
-                    && outletRepository.existsByNameIgnoreCase(normalizedName)) {
-                throw new OutletExistException();
+           if (!normalizedName.equalsIgnoreCase(outlet.getName())
+                && outletRepository.existsByNameIgnoreCase(normalizedName)) {
+            throw new OutletExistException();
             }
 
             request.setName(normalizedName);
@@ -91,7 +97,7 @@ public class OutletService {
         Set<String> names = new HashSet<>();
         
         List<Outlet> outlets = requests.stream().map(t -> {
-            String normalizedName = normalizeName(t.getName());
+            String normalizedName = normalizeString(t.getName());
             
             if (!names.add(normalizedName)) {
                 throw new IllegalArgumentException("Outlet adı tekrar edemez: " + normalizedName);
@@ -113,7 +119,5 @@ public class OutletService {
     
     
 
-    private String normalizeName(String name) {
-        return name.trim().toLowerCase(Locale.ROOT);
-    }
+   
 }

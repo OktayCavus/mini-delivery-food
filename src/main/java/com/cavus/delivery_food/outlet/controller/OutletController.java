@@ -5,11 +5,11 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,12 +21,11 @@ import com.cavus.delivery_food.outlet.dto.OutletRequest;
 import com.cavus.delivery_food.outlet.dto.OutletResponse;
 import com.cavus.delivery_food.outlet.service.OutletService;
 
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/outlets")
+@RequestMapping("/api/v1/outlets")
 @RequiredArgsConstructor
 public class OutletController {
 
@@ -36,8 +35,9 @@ public class OutletController {
    
     // create
     @PostMapping
-    public ResponseEntity<BaseResponse<OutletResponse>> create(@RequestBody OutletRequest request) {
-        return ResponseEntity.ok(BaseResponse.success(HttpStatus.CREATED.value(), "Outlet başarıyla oluşturuldu", outletService.create(request)));
+    public ResponseEntity<BaseResponse<OutletResponse>> create(@Valid @RequestBody OutletRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.success(HttpStatus.CREATED.value(), "Outlet başarıyla oluşturuldu", outletService.create(request)));
     }
 
     // getAll
@@ -58,7 +58,7 @@ public class OutletController {
      // update
      @PutMapping("/{id}")
      public ResponseEntity<BaseResponse<OutletResponse>> update(@PathVariable UUID id,
-             @RequestBody OutletRequest request) {
+             @Valid @RequestBody OutletRequest request) {
          return ResponseEntity.ok(
                  BaseResponse.success(HttpStatus.OK.value(), "Outlet güncellendi", outletService.update(id, request)));
      }
@@ -78,9 +78,10 @@ public class OutletController {
     }
     
     @PostMapping("/{outletId}/categories")
-    public ResponseEntity<BaseResponse<CategoryResponse>> createCategoryForOutlet(@PathVariable UUID outletId, @RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(BaseResponse.success(HttpStatus.OK.value(), "Kategori başarıyla oluşturuldu",
-                categoryService.createCategoryForOutlet(outletId, request)));
+    public ResponseEntity<BaseResponse<CategoryResponse>> createCategoryForOutlet(@PathVariable UUID outletId, @Valid @RequestBody CategoryRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.success(HttpStatus.CREATED.value(), "Kategori başarıyla oluşturuldu",
+                        categoryService.createCategoryForOutlet(outletId, request)));
     }
 
   

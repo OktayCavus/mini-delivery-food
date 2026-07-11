@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,15 +25,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/products")
 @Tag(name = "Products")
+@RequiredArgsConstructor
 public class ProductController {
 
     final private ProductService productService;
-    private final ProductMapper productMapper;
-
-    public ProductController(ProductService productService, ProductMapper productMapper){
-        this.productService = productService;
-        this.productMapper = productMapper;
-    }
 
     @GetMapping
     @Operation(summary = "Tüm ürünleri listele")
@@ -70,7 +67,7 @@ public class ProductController {
                 .body(BaseResponse.success(201, "Ürün başarıyla oluşturuldu", createdProduct));
     }
 
-    @PostMapping("/create-bulk")
+    @PostMapping("/bulk")
     @Operation(summary = "Yeni ürünleri toplu oluştur")
     @ApiResponse(responseCode = "201", description = "Ürünler başarıyla oluşturuldu")
     @ApiResponse(responseCode = "400", description = "Geçersiz ürün verisi")

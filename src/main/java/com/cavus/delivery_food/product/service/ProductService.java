@@ -8,9 +8,11 @@ import com.cavus.delivery_food.outlet.service.OutletService;
 import com.cavus.delivery_food.product.dto.ProductRequest;
 import com.cavus.delivery_food.product.dto.ProductResponse;
 import com.cavus.delivery_food.product.entity.Product;
+import com.cavus.delivery_food.product.exceptions.ProductNotFoundException;
 import com.cavus.delivery_food.product.mapper.ProductMapper;
 import com.cavus.delivery_food.product.repository.ProductRepository;
 
+import io.jsonwebtoken.lang.Collections;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -57,16 +59,16 @@ public class  ProductService {
     public ProductResponse create(ProductRequest request) {
         Product entity = productMapper.toEntity(request);
 
-        Outlet outlet = outletService.getEntityById(request.getOutletId());
-
-        entity.setOutlet(outlet);
 
         /// Produuct'a category ekleme
-        if(request.getCategoryId() != null){
-            Category category = categoryService.getEntityById(request.getCategoryId());
-            validateCategoryBelongsToOutlet(category, outlet);
-            entity.setCategory(category);
+        if (request.getCategoryId() != null && request.getOutletId() != null) {
+            Category selectedCategory = categoryService.getEntityById(request.getCategoryId());
+            Outlet outlet = outletService.getEntityById(request.getOutletId());
+            validateCategoryBelongsToOutlet(selectedCategory, outlet);
+            entity.setCategory(selectedCategory);
+            entity.setOutlet(outlet);
         }
+        
         Product savedProduct = productRepository.save(entity);
 
         return productMapper.toProductResponse(savedProduct);
@@ -93,7 +95,7 @@ public class  ProductService {
         if(productIds == null || productIds.isEmpty()){
             throw new IllegalArgumentException("Ürün listesi boş olamaz");
         }
-        categoryService.getEntityById(categoryId);
+       Category selectedCategory = categoryService.getEntityById(categoryId);
         List<Product> products = productRepository.findAllById(productIds);
 
         if(products.isEmpty() || products.size() != productIds.size()){
@@ -103,7 +105,7 @@ public class  ProductService {
             if(product.getCategory() != null){
                 throw new IllegalArgumentException("Bu ürün zaten bir kategoriye atanmış, ürün ismi: " + product.getName()+ "id: " + product.getId());
             }
-            product.setCategory(categoryService.getEntityById(categoryId));
+            product.setCategory(selectedCategory);
         }
         List<Product> savedProducts = productRepository.saveAll(products);
         return productMapper.toProductResponseList(savedProducts);
@@ -121,11 +123,47 @@ public class  ProductService {
     }
 
     @Transactional
-    public List<ProductResponse> createBulk(List<ProductRequest> requests) {
-        List<Product> productList = productMapper.toProductList(requests);
-        List<Product> products = productRepository.saveAll(productList);
-        return productMapper.toProductResponseList(products);
+public List<ProductResponse> createBulk(List<ProductRequest> requests) {
+
+    if (requests.isEmpty()) {
+        return Collections.emptyList();
     }
+
+    UUID outletId = requests.get(0).getOutletId();
+    UUID categoryId = requests.get(0).getCategoryId();
+
+    boolean sameOutlet = requests.stream()
+            .allMatch(x -> x.getOutletId().equals(outletId));
+    boolean sameCategory = requests.stream()
+            .allMatch(x -> x.getCategoryId().equals(categoryId));
+    if (!sameOutlet) {
+        throw new IllegalArgumentException("All products must belong to the same outlet.");
+    }    if (!sameCategory) {
+        throw new IllegalArgumentException("All products must belong to the same category.");
+    }
+
+
+    Outlet outlet = outletService.getEntityById(outletId);
+    Category category = categoryService.getEntityById(categoryId);
+
+    validateCategoryBelongsToOutlet(category, outlet);
+
+
+    List<Product> products =
+            productMapper.toProductList(requests);
+
+
+    products.forEach(product -> {
+        product.setOutlet(outlet);
+        product.setCategory(category);
+    });
+           
+            
+
+    productRepository.saveAll(products);
+
+    return productMapper.toProductResponseList(products);
+}
 
     @Transactional
     public ProductResponse update(UUID uuid, ProductRequest request) {

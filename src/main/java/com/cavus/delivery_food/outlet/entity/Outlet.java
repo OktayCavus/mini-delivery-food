@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.cavus.delivery_food.category.entity.Category;
-import com.cavus.delivery_food.entity.BaseEntity;
+import com.cavus.delivery_food.common.entity.BaseEntity;
 import com.cavus.delivery_food.product.entity.Product;
 
 import jakarta.persistence.Column;
@@ -15,6 +15,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
@@ -22,6 +23,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 public class Outlet extends BaseEntity{
 
     @Column(nullable = false, unique = true)
@@ -39,10 +41,14 @@ public class Outlet extends BaseEntity{
     @Column(nullable = false)
     private Boolean active = true;
 
-    @OneToMany
+    /// Burada da category tablosunda outlet_id olduğu için mappedBy= "outlet" bu tarafta belirtilir
+    /// Burada ilişkinin sahibi FK (Foreign key) 'i tutan taraf yani category tarafı. mappedBy'da FK'yi tutmayan tarafa yazılır
+    /// Many tarafı owner olur çünkü FK orada belirtilir
+    @OneToMany(mappedBy = "outlet")
     private List<Category> categories = new ArrayList<>();
 
-    @OneToMany
+
+    @OneToMany(mappedBy = "outlet")
     private List<Product> products = new ArrayList<>();
     
     

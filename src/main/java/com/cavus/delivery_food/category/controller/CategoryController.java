@@ -13,6 +13,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -26,8 +27,8 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<BaseResponse<CategoryResponse>> create(@Valid @RequestBody CategoryRequest categoryRequest){
-        CategoryResponse createdCategory = categoryService.create(categoryRequest);
+    public ResponseEntity<BaseResponse<CategoryResponse>> create(@Valid @RequestBody CategoryRequest categoryRequest, @PathVariable UUID outletId){
+        CategoryResponse createdCategory = categoryService.createCategoryForOutlet(outletId, categoryRequest);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(createdCategory.getId()).toUri();

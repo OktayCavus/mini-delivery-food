@@ -3,10 +3,13 @@ package com.cavus.delivery_food.category.service;
 import com.cavus.delivery_food.category.dto.CategoryRequest;
 import com.cavus.delivery_food.category.dto.CategoryResponse;
 import com.cavus.delivery_food.category.entity.Category;
+import com.cavus.delivery_food.category.exceptions.CategoryExistException;
+import com.cavus.delivery_food.category.exceptions.CategoryNotFoundException;
 import com.cavus.delivery_food.category.mapper.CategoryMapper;
 import com.cavus.delivery_food.category.repository.CategoryRepository;
 import com.cavus.delivery_food.outlet.entity.Outlet;
 import com.cavus.delivery_food.outlet.service.OutletService;
+import static com.cavus.delivery_food.common.utils.NormalizeStringUtils.normalizeString;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,18 +33,18 @@ public class CategoryService {
 
   
 
-    public CategoryResponse create(CategoryRequest request) {
-        String normalizedName = normalizeName(request.getName());
+    // public CategoryResponse create(CategoryRequest request) {
+    //     String normalizedName = normalizeName(request.getName());
 
-        if (categoryRepository.existsByNameIgnoreCase(normalizedName)) {
-            throw new IllegalArgumentException("Bu kategori adı zaten kullanılıyor: " + request.getName());
-        }
+    //     if (categoryRepository.existsByNameIgnoreCase(normalizedName)) {
+    //         throw new IllegalArgumentException("Bu kategori adı zaten kullanılıyor: " + request.getName());
+    //     }
 
-        Category entity = categoryMapper.toEntity(request);
-        entity.setName(normalizedName);
-        Category savedCategory = categoryRepository.save(entity);
-        return categoryMapper.toCategoryResponse(savedCategory);
-    }
+    //     Category entity = categoryMapper.toEntity(request);
+    //     entity.setName(normalizedName);
+    //     Category savedCategory = categoryRepository.save(entity);
+    //     return categoryMapper.toCategoryResponse(savedCategory);
+    // }
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> findAll() {
@@ -64,7 +67,7 @@ public class CategoryService {
         Set<String> requestNames = new HashSet<>();
 
         for (CategoryRequest request : requests) {
-            String name = normalizeName(request.getName());
+            String name = normalizeString(request.getName());
 
             if (!requestNames.add(name)) {
                 throw new IllegalArgumentException("Liste içinde tekrar eden kategori adı var: " + request.getName());
@@ -78,7 +81,7 @@ public class CategoryService {
         List<Category> categories = requests.stream()
                 .map(request -> {
                     Category category = categoryMapper.toEntity(request);
-                    category.setName(normalizeName(request.getName()));
+                    category.setName(normalizeString(request.getName()));
                     return category;
                 })
                 .toList();
@@ -96,7 +99,7 @@ public class CategoryService {
     public CategoryResponse createCategoryForOutlet(UUID outletId, CategoryRequest request) {
         Outlet outlet = outletService.getEntityById(outletId);
 
-        String normalizedName = normalizeName(request.getName());
+        String normalizedName = normalizeString(request.getName());
 
         if (categoryRepository.existsByNameIgnoreCaseAndOutletId(normalizedName, outletId)) {
             throw new CategoryExistException(normalizedName);
@@ -113,7 +116,5 @@ public class CategoryService {
         
     }
 
-    private String normalizeName(String name) {
-        return name.trim().toLowerCase(Locale.ROOT);
-    }
+    
 }

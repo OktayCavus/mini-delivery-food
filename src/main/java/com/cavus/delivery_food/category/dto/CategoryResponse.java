@@ -1,5 +1,7 @@
 package com.cavus.delivery_food.category.dto;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryResponse {
-    private String id;
+    private UUID id;
     private String name;
     private String description;
     private Boolean active;

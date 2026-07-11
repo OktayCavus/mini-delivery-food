@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.product.service;
+package com.cavus.delivery_food.product.exceptions;
 
 
 import java.util.UUID;

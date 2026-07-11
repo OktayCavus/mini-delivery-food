@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.category.service;
+package com.cavus.delivery_food.category.exceptions;
 
 /**
  * CategoryExistException

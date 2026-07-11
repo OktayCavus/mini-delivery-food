@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.outlet.service;
+package com.cavus.delivery_food.outlet.exceptions;
 
 public class OutletExistException extends RuntimeException {
 

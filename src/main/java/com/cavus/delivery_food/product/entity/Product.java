@@ -3,7 +3,7 @@ package com.cavus.delivery_food.product.entity;
 
 
 import com.cavus.delivery_food.category.entity.Category;
-import com.cavus.delivery_food.entity.BaseEntity;
+import com.cavus.delivery_food.common.entity.BaseEntity;
 import com.cavus.delivery_food.outlet.entity.Outlet;
 
 import jakarta.persistence.*;
@@ -14,7 +14,10 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_product_outlet", columnList = "outlet_id"),
+    @Index(name = "idx_product_category", columnList = "category_id")
+})
 public class Product extends BaseEntity {
 
     @Column(nullable = false)
@@ -38,6 +41,7 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private Boolean active = true;
 
+    /// Category Product ilişkisinde FK'yı product tutar @JoinColumn ifadesi buraya yazılır. Ne demektir category tablosuyla product tablosunu product içindeki category_id ile ilişkilendirir.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
