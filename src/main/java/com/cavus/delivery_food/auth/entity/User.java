@@ -1,12 +1,11 @@
 package com.cavus.delivery_food.auth.entity;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.cavus.delivery_food.common.entity.BaseEntity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
@@ -28,9 +27,9 @@ public class User extends BaseEntity {
     @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
-    private Role role;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles = new HashSet<>();
 
 
 }
