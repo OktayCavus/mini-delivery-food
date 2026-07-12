@@ -1,5 +1,7 @@
 package com.cavus.delivery_food.auth.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,6 @@ public class RegisterResponse {
     private String email;
     private String firstName;
     private String lastName;
-    private String role;
+    private List<String> roles;
     
 }

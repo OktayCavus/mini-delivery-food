@@ -1,4 +1,4 @@
-package com.cavus.delivery_food.auth.exceptions;
+package com.cavus.delivery_food.auth.security;
 
 import java.util.Base64;
 import java.util.Date;
