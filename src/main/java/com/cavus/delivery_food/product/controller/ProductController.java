@@ -1,10 +1,14 @@
 package com.cavus.delivery_food.product.controller;
 
 
+import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_CREATE;
+import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_DELETE;
+import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_READ;
+import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_UPDATE;
+
 import com.cavus.delivery_food.common.response.BaseResponse;
 import com.cavus.delivery_food.product.dto.ProductRequest;
 import com.cavus.delivery_food.product.dto.ProductResponse;
-import com.cavus.delivery_food.product.mapper.ProductMapper;
 import com.cavus.delivery_food.product.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -30,6 +35,7 @@ public class ProductController {
 
     final private ProductService productService;
 
+    @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
     @GetMapping
     @Operation(summary = "Tüm ürünleri listele")
     @ApiResponse(responseCode = "200", description = "Ürünler başarıyla listelendi")
@@ -38,6 +44,7 @@ public class ProductController {
        return ResponseEntity.ok(BaseResponse.success(200, "Ürünler başarıyla listelendi", products));
     }
 
+    @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
     @GetMapping("/{id}")
     @Operation(summary = "ID'ye göre ürün getir")
     @ApiResponse(responseCode = "200", description = "Ürün bulundu")
@@ -48,15 +55,13 @@ public class ProductController {
        return ResponseEntity.ok(BaseResponse.success(200, "Ürün başarıyla getirildi", product));
     }
 
-    /// @Valid ProductRequest içindeki validation annotation'larını çalıştırır.
+    @PreAuthorize("hasAuthority('" + PRODUCT_CREATE + "')")
     @PostMapping
     @Operation(summary = "Yeni ürün oluştur")
     @ApiResponse(responseCode = "201", description = "Ürün başarıyla oluşturuldu")
     @ApiResponse(responseCode = "400", description = "Geçersiz ürün verisi")
     public ResponseEntity<BaseResponse<ProductResponse>> create(@Valid @RequestBody ProductRequest request){
         ProductResponse createdProduct = productService.create(request);
-
-        /// Bu parça client için faydalıymış sebebi direkt oluşan url'i döndürüyor bu şekilde client direkt içeriğe gidebilir
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -67,6 +72,7 @@ public class ProductController {
                 .body(BaseResponse.success(201, "Ürün başarıyla oluşturuldu", createdProduct));
     }
 
+    @PreAuthorize("hasAuthority('" + PRODUCT_CREATE + "')")
     @PostMapping("/bulk")
     @Operation(summary = "Yeni ürünleri toplu oluştur")
     @ApiResponse(responseCode = "201", description = "Ürünler başarıyla oluşturuldu")
@@ -78,6 +84,7 @@ public class ProductController {
                 .body(BaseResponse.success(201, "Ürünler başarıyla oluşturuldu", bulkedProducts));
     }
 
+    @PreAuthorize("hasAuthority('" + PRODUCT_UPDATE + "')")
     @PutMapping("/{id}")
     @Operation(summary = "Ürün güncelle")
     @ApiResponse(responseCode = "200", description = "Ürün başarıyla güncellendi")
@@ -91,7 +98,7 @@ public class ProductController {
 
     }
 
-
+    @PreAuthorize("hasAuthority('" + PRODUCT_DELETE + "')")
     @DeleteMapping("/{id}")
     @Operation(summary = "Ürün sil")
     @ApiResponse(responseCode = "200", description = "Ürün başarıyla silindi")
@@ -102,8 +109,7 @@ public class ProductController {
         return ResponseEntity.ok(BaseResponse.success(200, "Ürün başarıyla silindi", null));
     }
 
-
-    /// Ürünü kategoriye atama
+    @PreAuthorize("hasAuthority('" + PRODUCT_UPDATE + "')")
     @PutMapping("/{productId}/category/{categoryId}")
     @Operation(summary = "Ürünü kategoriye ata")
     @ApiResponse(responseCode = "200", description = "Ürün kategoriye başarıyla atandı")
@@ -119,7 +125,7 @@ public class ProductController {
         );
     }
 
-    /// Toplu ürünleri kategoriye atama
+    @PreAuthorize("hasAuthority('" + PRODUCT_UPDATE + "')")
     @PutMapping("/bulk/category/{categoryId}")
     @Operation(summary = "Toplu olarak Ürünleri kategoriye ata")
     @ApiResponse(responseCode = "200", description = "Ürünler kategoriye başarıyla atandı")
@@ -133,7 +139,7 @@ public class ProductController {
         );
     }
 
-    /// Kategoriye göre ürün listeleme
+    @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
     @GetMapping("/by-category/{categoryId}")
     @Operation(summary = "Kategoriye ait ürünleri listele")
     @ApiResponse(responseCode = "200", description = "Kategoriye ait ürünler başarıyla listelendi")
@@ -146,13 +152,14 @@ public class ProductController {
         return ResponseEntity.ok(
                 BaseResponse.success(200, "Kategoriye ait ürünler listelendi", products));
     }
-    
+
+    @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
     @GetMapping("/by-outlet/{outletId}")
-@Operation(summary = "Outlet menüsündeki ürünleri listele")
-public ResponseEntity<BaseResponse<List<ProductResponse>>> getProductsByOutlet(
-        @PathVariable UUID outletId) {
-    List<ProductResponse> products = productService.findByOutletId(outletId);
-    return ResponseEntity.ok(
-            BaseResponse.success(200, "Outlet ürünleri listelendi", products));
-}
+    @Operation(summary = "Outlet menüsündeki ürünleri listele")
+    public ResponseEntity<BaseResponse<List<ProductResponse>>> getProductsByOutlet(
+            @PathVariable UUID outletId) {
+        List<ProductResponse> products = productService.findByOutletId(outletId);
+        return ResponseEntity.ok(
+                BaseResponse.success(200, "Outlet ürünleri listelendi", products));
+    }
 }
