@@ -2,11 +2,13 @@ package com.cavus.delivery_food.auth.security;
 
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -26,13 +28,17 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
 
-        String role = userDetails.getAuthorities().stream()
-        .findFirst().map(auth -> auth.getAuthority().replace("ROLE_", "")).orElse("USER");
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .map(authority -> authority.substring("ROLE_".length()))
+                .sorted()
+                .toList();
 
         return Jwts.builder()
             .subject(userDetails.getUsername())
             .issuedAt(new Date())
-            .claim("role", role)
+            .claim("roles", roles)
             .expiration(new Date(System.currentTimeMillis() + expirationMs))
             .signWith(getSigningKey())
             .compact();
