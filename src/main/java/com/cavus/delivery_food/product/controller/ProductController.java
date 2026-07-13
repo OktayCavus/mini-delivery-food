@@ -6,7 +6,9 @@ import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_DELETE;
 import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_READ;
 import static com.cavus.delivery_food.auth.entity.Permissions.PRODUCT_UPDATE;
 
+import com.cavus.delivery_food.common.entity.PageResponse;
 import com.cavus.delivery_food.common.response.BaseResponse;
+import com.cavus.delivery_food.product.dto.ProductFilterRequest;
 import com.cavus.delivery_food.product.dto.ProductRequest;
 import com.cavus.delivery_food.product.dto.ProductResponse;
 import com.cavus.delivery_food.product.service.ProductService;
@@ -17,6 +19,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,13 +41,25 @@ public class ProductController {
 
     final private ProductService productService;
 
-    @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
-    @GetMapping
-    @Operation(summary = "Tüm ürünleri listele")
+   @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")
+@GetMapping
+@Operation(
+    summary = "Ürünleri sayfalı listele",
+    description = """
+        Sayfalama, sıralama ve filtreleme destekler.
+        Örnek: ?page=0&size=10&sort=name,asc&name=pizza&active=true&minPrice=50
+        """
+)
     @ApiResponse(responseCode = "200", description = "Ürünler başarıyla listelendi")
-    public ResponseEntity<BaseResponse<List<ProductResponse>>> getAllProducts(){
-       List<ProductResponse> products = productService.findAll();
-       return ResponseEntity.ok(BaseResponse.success(200, "Ürünler başarıyla listelendi", products));
+    public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getAllProducts(
+            @ParameterObject @Valid ProductFilterRequest filter,
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC)
+            Pageable pageable) {
+
+        PageResponse<ProductResponse> page = productService.findAll(filter, pageable);
+        return ResponseEntity.ok(
+                BaseResponse.success(200, "Ürünler başarıyla listelendi", page));
     }
 
     @PreAuthorize("hasAuthority('" + PRODUCT_READ + "')")

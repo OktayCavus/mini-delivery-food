@@ -3,22 +3,30 @@ package com.cavus.delivery_food.product.service;
 
 import com.cavus.delivery_food.category.entity.Category;
 import com.cavus.delivery_food.category.service.CategoryService;
+import com.cavus.delivery_food.common.entity.PageResponse;
+import com.cavus.delivery_food.common.utils.PageableUtil;
 import com.cavus.delivery_food.outlet.entity.Outlet;
 import com.cavus.delivery_food.outlet.service.OutletService;
+import com.cavus.delivery_food.product.dto.ProductFilterRequest;
 import com.cavus.delivery_food.product.dto.ProductRequest;
 import com.cavus.delivery_food.product.dto.ProductResponse;
 import com.cavus.delivery_food.product.entity.Product;
 import com.cavus.delivery_food.product.exceptions.ProductNotFoundException;
 import com.cavus.delivery_food.product.mapper.ProductMapper;
 import com.cavus.delivery_food.product.repository.ProductRepository;
+import com.cavus.delivery_food.product.specification.ProductSpecification;
 
 import io.jsonwebtoken.lang.Collections;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -33,13 +41,21 @@ public class  ProductService {
     private final OutletService outletService;
 
 
-    /// `@Transactional(readOnly = true)` ne demek?** Sadece okuma yapan metotlarda (findAll, findById) performans için "bu metot veri değiştirmiyor" bilgisini verir.
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+        "name", "price", "stock", "active"
+);
 
-    @Transactional(readOnly = true)
-    public List<ProductResponse> findAll(){
-        List<Product> allProducts = productRepository.findAll();
-        return  productMapper.toProductResponseList(allProducts);
-    }
+
+ @Transactional(readOnly = true)
+public PageResponse<ProductResponse> findAll(ProductFilterRequest filter, Pageable pageable) {
+    Pageable safePageable = PageableUtil.sanitize(pageable, ALLOWED_SORT_FIELDS, "name");
+
+    Specification<Product> spec = ProductSpecification.withFilter(filter);
+    Page<Product> productPage = productRepository.findAll(spec, safePageable);
+
+    List<ProductResponse> content = productMapper.toProductResponseList(productPage.getContent());
+    return PageResponse.from(productPage, content);
+}
 
 
     /// Burada exception olduğunda springboot RestControllerAdvice annotation arar  (Bu exception kimde handle ediliyor?)

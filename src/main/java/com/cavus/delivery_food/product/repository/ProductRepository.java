@@ -4,12 +4,15 @@ import com.cavus.delivery_food.product.entity.Product;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.UUID;
 
+/// ! ProductSpecification class'ını kullanıp dinamik sorgular üretebilmek için JpaSpecificationExecutor bunu eklememiz gerekir.
+public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
-public interface ProductRepository extends JpaRepository<Product, UUID> {
+ 
 
 
     /// ! N + 1 problemi diye bir problem var. Birbiri ile ilişkili olan entity'leri birlikte getirir.
