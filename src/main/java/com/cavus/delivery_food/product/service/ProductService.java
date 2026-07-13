@@ -47,13 +47,18 @@ public class  ProductService {
 
 
  @Transactional(readOnly = true)
-public PageResponse<ProductResponse> findAll(ProductFilterRequest filter, Pageable pageable) {
+ public PageResponse<ProductResponse> findAll(ProductFilterRequest filter, Pageable pageable) {
+    /// ! Pageable springin hazır pagination nesnesi onu bizim koşullara göre düzenliyoruz
     Pageable safePageable = PageableUtil.sanitize(pageable, ALLOWED_SORT_FIELDS, "name");
 
-    Specification<Product> spec = ProductSpecification.withFilter(filter);
+   /// ! Burada filtrelerden dinamik sorgu oluşturuluyor
+   Specification<Product> spec = ProductSpecification.withFilter(filter);
+    /// ! Repository'deki JpaSpecificationExecutor bunun findAll metodu ile Page<T> tipinde response alıyor
     Page<Product> productPage = productRepository.findAll(spec, safePageable);
 
+    /// ! dönen cevabı Dto'ya çeviriyoruz
     List<ProductResponse> content = productMapper.toProductResponseList(productPage.getContent());
+    
     return PageResponse.from(productPage, content);
 }
 
