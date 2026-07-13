@@ -4,12 +4,13 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import com.cavus.delivery_food.outlet.entity.Outlet;
 
 @Repository
-public interface OutletRepository  extends JpaRepository<Outlet, UUID> {
+public interface OutletRepository  extends JpaRepository<Outlet, UUID>, JpaSpecificationExecutor<Outlet> {
 
     boolean existsByNameIgnoreCase(String name);
 

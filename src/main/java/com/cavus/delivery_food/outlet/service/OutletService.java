@@ -6,9 +6,16 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.cavus.delivery_food.common.entity.PageResponse;
+import com.cavus.delivery_food.common.utils.PageableUtil;
+import com.cavus.delivery_food.outlet.dto.OutletFilterRequest;
 import com.cavus.delivery_food.outlet.dto.OutletRequest;
 import com.cavus.delivery_food.outlet.dto.OutletResponse;
 import com.cavus.delivery_food.outlet.entity.Outlet;
@@ -16,6 +23,8 @@ import com.cavus.delivery_food.outlet.exceptions.OutletExistException;
 import com.cavus.delivery_food.outlet.exceptions.OutletNotFoundException;
 import com.cavus.delivery_food.outlet.mapper.OutletMapper;
 import com.cavus.delivery_food.outlet.repository.OutletRepository;
+import com.cavus.delivery_food.outlet.specification.OutletSpecification;
+
 import static com.cavus.delivery_food.common.utils.NormalizeStringUtils.normalizeString;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +34,10 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class OutletService {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+        "name", "address", "phone", "email", "active"
+    );
 
     private final OutletRepository outletRepository;
     private final OutletMapper outletMapper;
@@ -42,8 +55,15 @@ public class OutletService {
     }
 
     @Transactional(readOnly = true)
-    public List<OutletResponse> findAll() {
-        return outletMapper.toOutletResponseList(outletRepository.findAll());
+    public PageResponse<OutletResponse> findAll(OutletFilterRequest filter, Pageable page) {
+
+        Pageable safePageable = PageableUtil.sanitize(page, ALLOWED_SORT_FIELDS, "name");
+
+        Specification<Outlet> spec = OutletSpecification.withFilter(filter);
+        Page<Outlet> outletPage = outletRepository.findAll(spec, safePageable);
+        List<OutletResponse> content = outletMapper.toOutletResponseList(outletPage.getContent());
+        return PageResponse.from(outletPage, content);
+        
     }
 
     @Transactional(readOnly = true)

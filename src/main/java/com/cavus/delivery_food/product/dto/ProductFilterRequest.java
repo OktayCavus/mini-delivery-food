@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class ProductFilterRequest {
 
 
-    @Schema(description = "Ürün adı (partial, case-insensitive)", example = "pizza", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Schema(description = "Ürün adı (partial, case-insensitive)", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @Size(max = 255, message = "Arama terimi en fazla 255 karakter olabilir")
     private String name;
 
@@ -25,11 +25,11 @@ public class ProductFilterRequest {
     @Size(max = 500)
     private String description;
 
-    @Schema(description = "Minimum fiyat", example = "100.00", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Schema(description = "Minimum fiyat", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @DecimalMin(value = "0.0", message = "Minimum fiyat 0'dan küçük olamaz")
     private BigDecimal minPrice;
 
-    @Schema(description = "Maksimum fiyat", example = "500.00", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Schema(description = "Maksimum fiyat", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @DecimalMin(value = "0.0", message = "Maksimum fiyat 0'dan küçük olamaz")
     private BigDecimal maxPrice;
 
@@ -48,6 +48,6 @@ public class ProductFilterRequest {
     @Schema(description = "Outlet ID filtresi", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private UUID outletId;
 
-    @Schema(description = "Genel arama terimi (name ve description'da arar)", example = "iphone", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Schema(description = "Genel arama terimi (name ve description'da arar)", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String search;
 }
