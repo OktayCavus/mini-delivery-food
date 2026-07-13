@@ -32,8 +32,8 @@ public class CategoryController {
 
     @PreAuthorize("hasAuthority('" + CATEGORY_CREATE + "')")
     @PostMapping
-    public ResponseEntity<BaseResponse<CategoryResponse>> create(@Valid @RequestBody CategoryRequest categoryRequest, @PathVariable UUID outletId){
-        CategoryResponse createdCategory = categoryService.createCategoryForOutlet(outletId, categoryRequest);
+    public ResponseEntity<BaseResponse<CategoryResponse>> create(@Valid @RequestBody CategoryRequest categoryRequest){
+        CategoryResponse createdCategory = categoryService.createCategoryForOutlet(categoryRequest);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(createdCategory.getId()).toUri();

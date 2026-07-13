@@ -96,12 +96,12 @@ public class CategoryService {
     return categoryMapper.toCategoryResponseList(categoryRepository.findAllByOutletIdAndActiveTrue(outletId));
     }
 
-    public CategoryResponse createCategoryForOutlet(UUID outletId, CategoryRequest request) {
-        Outlet outlet = outletService.getEntityById(outletId);
+    public CategoryResponse createCategoryForOutlet(CategoryRequest request) {
+        Outlet outlet = outletService.getEntityById(request.getOutletId());
 
         String normalizedName = normalizeString(request.getName());
 
-        if (categoryRepository.existsByNameIgnoreCaseAndOutletId(normalizedName, outletId)) {
+        if (categoryRepository.existsByNameIgnoreCaseAndOutletId(normalizedName, request.getOutletId())) {
             throw new CategoryExistException(normalizedName);
         }
 
