@@ -44,6 +44,7 @@ public final class ProductSpecification {
             if (StringUtils.hasText(filter.getSearch())) {
                 /// ! search filter'ı varsa name ve description'da arar
                 /// ! şöyle bir sql sorgusu üretir: SELECT * FROM products WHERE name LIKE '%search%' OR description LIKE '%search%'
+                /// ! yani isimde veya açıklamada search'teki kelimeyi arar.
                 String pattern = "%" + filter.getSearch().toLowerCase() + "%";
                 Predicate nameMatch = cb.like(cb.lower(root.get("name")), pattern);
                 Predicate descMatch = cb.like(cb.lower(root.get("description")), pattern);

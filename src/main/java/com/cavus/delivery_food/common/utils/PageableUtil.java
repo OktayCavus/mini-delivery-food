@@ -36,8 +36,7 @@ public final class PageableUtil {
                     sanitized = sanitized.and(Sort.by(order.getDirection(), order.getProperty()));
                 }
             }
-            /// ! allowedSortFields'a göre gelmediyse false döner oradan çıkar tekrar kontrol edilir
-            /// ! sanitized.isUnsorted() = true ise defaultSortField'ı asc olarak setler
+        
             if (sanitized.isUnsorted()) {
                 sort = Sort.by(defaultSortField).ascending();
             } else {
