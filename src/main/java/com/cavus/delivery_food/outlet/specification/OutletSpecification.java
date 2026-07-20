@@ -1,16 +1,10 @@
 package com.cavus.delivery_food.outlet.specification;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.util.StringUtils;
 
+import com.cavus.delivery_food.common.specification.SpecificationUtils;
 import com.cavus.delivery_food.outlet.dto.OutletFilterRequest;
 import com.cavus.delivery_food.outlet.entity.Outlet;
-
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
 
 public final class OutletSpecification {
 
@@ -18,38 +12,36 @@ public final class OutletSpecification {
     }
 
     public static Specification<Outlet> withFilter(OutletFilterRequest filter) {
-        return (r, q , cb) -> {
-       
+        if (filter == null) {
+            return SpecificationUtils.unrestricted();
+        }
 
-            List<Predicate> predicates = new ArrayList<>();
+        // ! unrestricted() = where() gibi düşünülebilir
+        return SpecificationUtils.<Outlet>unrestricted()
+                .and(nameLike(filter.getName()))
+                .and(addressLike(filter.getAddress()))
+                .and(phoneEquals(filter.getPhone()))
+                .and(emailEquals(filter.getEmail()))
+                .and(activeEquals(filter.getActive()));
+    }
 
-            if (filter == null) {
-                return cb.and(predicates.toArray(new Predicate[0]));
-            }
-        
-            if (StringUtils.hasText(filter.getName())) {
-                String pattern = "%" + filter.getName().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(r.get("name")), pattern));
-            }
+    private static Specification<Outlet> nameLike(String name) {
+        return SpecificationUtils.likeIgnoreCase("name", name);
+    }
 
-            if (StringUtils.hasText(filter.getAddress())) {
-                String pattern = "%" + filter.getAddress().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(r.get("address")), pattern));
-            }
+    private static Specification<Outlet> addressLike(String address) {
+        return SpecificationUtils.likeIgnoreCase("address", address);
+    }
 
-            if (StringUtils.hasText(filter.getPhone())) {
-                predicates.add(cb.equal(r.get("phone"), filter.getPhone()));
-            }
+    private static Specification<Outlet> phoneEquals(String phone) {
+        return SpecificationUtils.equalIfPresent("phone", phone);
+    }
 
-            if (StringUtils.hasText(filter.getEmail())) {
-                predicates.add(cb.equal(cb.lower(r.get("email")), filter.getEmail().toLowerCase()));
-            }
+    private static Specification<Outlet> emailEquals(String email) {
+        return SpecificationUtils.equalIgnoreCaseIfPresent("email", email);
+    }
 
-            if (filter.getActive() != null) {
-                predicates.add(cb.equal(r.get("active"), filter.getActive()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+    private static Specification<Outlet> activeEquals(Boolean active) {
+        return SpecificationUtils.equalIfPresent("active", active);
     }
 }
