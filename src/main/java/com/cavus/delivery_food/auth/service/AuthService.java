@@ -66,7 +66,7 @@ public class AuthService {
 
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse login(LoginRequest loginRequest) {
 
         // 1. Spring Security'ye devret: user bul + şifre doğrula
@@ -105,6 +105,6 @@ public class AuthService {
 
     @Transactional
     public void logout(RefreshTokenRequest request) {
-    refreshTokenService.revokeRefreshToken(request.getRefreshToken());
-}
+        refreshTokenService.revokeRefreshToken(request.getRefreshToken());
+    }
 }
