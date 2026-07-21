@@ -23,10 +23,10 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expiration}")
-    private long expirationMs;
+    @Value("${jwt.access-expiration}")
+    private long accessExpirationMs;
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateAccessToken(UserDetails userDetails) {
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -39,7 +39,7 @@ public class JwtService {
             .subject(userDetails.getUsername())
             .issuedAt(new Date())
             .claim("roles", roles)
-            .expiration(new Date(System.currentTimeMillis() + expirationMs))
+            .expiration(new Date(System.currentTimeMillis() + accessExpirationMs))
             .signWith(getSigningKey())
             .compact();
     }

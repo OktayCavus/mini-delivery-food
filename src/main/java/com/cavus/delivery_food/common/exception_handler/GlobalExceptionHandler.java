@@ -6,7 +6,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.cavus.delivery_food.auth.exceptions.EmailAlreadyExistException;
+import com.cavus.delivery_food.auth.exceptions.ExpiredRefreshTokenException;
 import com.cavus.delivery_food.auth.exceptions.InvalidPasswordException;
+import com.cavus.delivery_food.auth.exceptions.InvalidRefreshTokenException;
 import com.cavus.delivery_food.auth.exceptions.UserNotFoundException;
 import com.cavus.delivery_food.category.exceptions.CategoryExistException;
 import com.cavus.delivery_food.category.exceptions.CategoryNotFoundException;
@@ -81,5 +83,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(BaseResponse.error(409, ex.getMessage()));
     }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+public ResponseEntity<BaseResponse<Void>> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(BaseResponse.error(401, ex.getMessage()));
+}
+
+@ExceptionHandler(ExpiredRefreshTokenException.class)
+public ResponseEntity<BaseResponse<Void>> handleExpiredRefreshToken(ExpiredRefreshTokenException ex) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(BaseResponse.error(401, ex.getMessage()));
+}
     
 }

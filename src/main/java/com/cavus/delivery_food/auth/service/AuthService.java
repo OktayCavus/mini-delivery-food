@@ -14,15 +14,19 @@ import org.springframework.security.core.Authentication;
 
 import com.cavus.delivery_food.auth.dto.LoginRequest;
 import com.cavus.delivery_food.auth.dto.LoginResponse;
+import com.cavus.delivery_food.auth.dto.RefreshTokenRequest;
+import com.cavus.delivery_food.auth.dto.RefreshTokenResponse;
 import com.cavus.delivery_food.auth.dto.RegisterRequest;
 import com.cavus.delivery_food.auth.dto.RegisterResponse;
 import com.cavus.delivery_food.auth.entity.Role;
 import com.cavus.delivery_food.auth.entity.RoleNames;
 import com.cavus.delivery_food.auth.entity.User;
 import com.cavus.delivery_food.auth.exceptions.EmailAlreadyExistException;
+import com.cavus.delivery_food.auth.exceptions.UserNotFoundException;
 import com.cavus.delivery_food.auth.mapper.UserMapper;
 import com.cavus.delivery_food.auth.repository.AuthRepository;
 import com.cavus.delivery_food.auth.repository.RoleRepository;
+import com.cavus.delivery_food.auth.security.CustomUserDetailsService;
 import com.cavus.delivery_food.auth.security.JwtService;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +41,8 @@ public class AuthService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
+    private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
 
  
@@ -72,11 +78,33 @@ public class AuthService {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
          // 3. JWT üret
-        String token = jwtService.generateToken(userDetails);
+         String accessToken = jwtService.generateAccessToken(userDetails);
+        
+          User user = authRepository.findByEmail(loginRequest.getEmail())
+            .orElseThrow(() -> new UserNotFoundException(loginRequest.getEmail()));
 
-        return new LoginResponse(token, "Bearer");
+        String refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new LoginResponse(accessToken, refreshToken, "Bearer");
 
 
     }
-    
+
+
+    @Transactional
+    public RefreshTokenResponse refresh(RefreshTokenRequest request) {
+
+        User user = refreshTokenService.validateAndGetUser(request.getRefreshToken());
+
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
+        String newAccessToken = jwtService.generateAccessToken(userDetails);
+        String newRefreshToken = refreshTokenService.rotateRefreshToken(request.getRefreshToken());
+
+        return new RefreshTokenResponse(newAccessToken, newRefreshToken, "Bearer");
+    }
+
+    @Transactional
+    public void logout(RefreshTokenRequest request) {
+    refreshTokenService.revokeRefreshToken(request.getRefreshToken());
+}
 }
